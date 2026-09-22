@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: meeting-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: meeting-service
+  template:
+    metadata:
+      labels:
+        app: meeting-service
+    spec:
+      containers:
+        - name: meeting-service
+          image: bookgather/meeting-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_HOST
+              value: mysql-bookgather
+            - name: DB_PORT
+              value: "3306"
+            - name: DB_NAME
+              value: meetingdb
+            - name: DB_USER
+              value: root
+            - name: DB_PASSWORD
+              value: root
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: meeting-service
+spec:
+  selector:
+    app: meeting-service
+  ports:
+    - port: 8080
+      targetPort: 8080
