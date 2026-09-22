@@ -1,0 +1,32 @@
+### Listar livros
+GET http://localhost:8080/books
+Accept: application/json
+
+### Criar livro
+POST http://localhost:8080/books
+Content-Type: application/json
+
+{
+  "titulo": "O Nome do Vento",
+  "autor": "Patrick Rothfuss",
+  "isbn": "978-0756404079",
+  "anoPublicacao": 2007
+}
+
+### Buscar livro 1
+GET http://localhost:8080/books/1
+Accept: application/json
+
+### Atualizar livro 1
+PUT http://localhost:8080/books/1
+Content-Type: application/json
+
+{
+  "titulo": "O Nome do Vento",
+  "autor": "Patrick Rothfuss",
+  "isbn": "978-0756404079",
+  "anoPublicacao": 2007
+}
+
+### Excluir livro 1
+DELETE http://localhost:8080/books/1
