@@ -1,0 +1,50 @@
+### Troque pelo EXTERNAL-IP do ingress-nginx-controller.
+### No docker compose nao ha Ingress: use as portas 8080 (books), 3000 (reviews) e 5000 (notifications).
+@host = http://SEU-EXTERNAL-IP
+
+### Criar livro (book-service / MySQL)
+POST {{host}}/books
+Content-Type: application/json
+
+{
+  "titulo": "O Nome do Vento",
+  "autor": "Patrick Rothfuss",
+  "isbn": "978-0756404079",
+  "anoPublicacao": 2007
+}
+
+### Listar livros
+GET {{host}}/books
+
+### Qual Pod do book-service respondeu
+GET {{host}}/instance
+
+### Balanceamento interno entre as replicas do book-service
+GET {{host}}/reviews/balanceamento?n=30
+
+### Criar avaliacao (REST para book-service + evento no RabbitMQ)
+POST {{host}}/reviews
+Content-Type: application/json
+
+{
+  "bookId": 1,
+  "autor": "Ana",
+  "nota": 5,
+  "comentario": "Excelente"
+}
+
+### Avaliacao para livro inexistente (espera 400)
+POST {{host}}/reviews
+Content-Type: application/json
+
+{
+  "bookId": 999,
+  "autor": "Ana",
+  "nota": 4
+}
+
+### Listar avaliacoes de um livro
+GET {{host}}/reviews?bookId=1
+
+### Notificacoes processadas pelo consumidor
+GET {{host}}/notifications

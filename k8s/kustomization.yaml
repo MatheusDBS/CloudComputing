@@ -1,0 +1,24 @@
+# kubectl apply -k k8s
+# Troque SEU_USUARIO_DOCKERHUB pelo seu usuario do Docker Hub (as imagens precisam ser publicas).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - rabbitmq.yaml
+  - mysql.yaml
+  - book-service.yaml
+  - postgres.yaml
+  - review-service.yaml
+  - notification-service.yaml
+  - ingress.yaml
+
+images:
+  - name: bookgather/book-service
+    newName: SEU_USUARIO_DOCKERHUB/bookgather-book-service
+    newTag: "1.0.0"
+  - name: bookgather/review-service
+    newName: SEU_USUARIO_DOCKERHUB/bookgather-review-service
+    newTag: "1.0.0"
+  - name: bookgather/notification-service
+    newName: SEU_USUARIO_DOCKERHUB/bookgather-notification-service
+    newTag: "1.0.0"

@@ -1,3 +1,12 @@
+# Banco exclusivo do book-service (Database per Service).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-book-auth
+type: Opaque
+stringData:
+  password: labbook123
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18,11 +27,23 @@ spec:
           ports:
             - containerPort: 3306
           env:
+            - name: MYSQL_DATABASE
+              value: bookdb
             - name: MYSQL_ROOT_PASSWORD
-              value: "root"
+              valueFrom:
+                secretKeyRef: {name: mysql-book-auth, key: password}
+          readinessProbe:
+            tcpSocket: {port: 3306}
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 100m, memory: 384Mi}
+            limits: {memory: 768Mi}
           volumeMounts:
             - name: mysql-data
               mountPath: /var/lib/mysql
+      # emptyDir: o EKS do Learner Lab nao tem o driver EBS CSI instalado,
+      # entao um PersistentVolumeClaim ficaria Pending. Os dados vivem enquanto o Pod viver.
       volumes:
         - name: mysql-data
           emptyDir: {}

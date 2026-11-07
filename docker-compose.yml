@@ -1,14 +1,78 @@
+# Ambiente local de desenvolvimento (a entrega final roda no Amazon EKS).
 services:
   mysql:
-    image: mysql:8.0
+    image: mysql:8.4
     container_name: bookgather-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: bookdb
     ports:
       - "3307:3306"
     volumes:
       - bookgather-mysql-data:/var/lib/mysql
 
+  postgres:
+    image: postgres:16
+    container_name: bookgather-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: reviewdb
+      POSTGRES_USER: review
+      POSTGRES_PASSWORD: review
+    ports:
+      - "5433:5432"
+    volumes:
+      - bookgather-postgres-data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:4.1-management
+    container_name: bookgather-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: bookgather
+      RABBITMQ_DEFAULT_PASS: change-me-lab
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  book-service:
+    build: ./book-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: mysql
+      DB_PASSWORD: root
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+
+  review-service:
+    build: ./review-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_USER: review
+      DB_PASSWORD: review
+      BOOK_SERVICE_URL: http://book-service:8080
+      RABBITMQ_HOST: rabbitmq
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - rabbitmq
+      - book-service
+
+  notification-service:
+    build: ./notification-service
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOST: rabbitmq
+    ports:
+      - "5000:5000"
+    depends_on:
+      - rabbitmq
+
 volumes:
   bookgather-mysql-data:
+  bookgather-postgres-data:

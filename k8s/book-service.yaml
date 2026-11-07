@@ -3,7 +3,8 @@ kind: Deployment
 metadata:
   name: book-service
 spec:
-  replicas: 1
+  # Escalabilidade horizontal: 3 replicas atras do mesmo Service.
+  replicas: 3
   selector:
     matchLabels:
       app: book-service
@@ -15,7 +16,7 @@ spec:
       containers:
         - name: book-service
           image: bookgather/book-service:1.0.0
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           env:
@@ -28,7 +29,15 @@ spec:
             - name: DB_USER
               value: root
             - name: DB_PASSWORD
-              value: root
+              valueFrom:
+                secretKeyRef: {name: mysql-book-auth, key: password}
+          readinessProbe:
+            httpGet: {path: /instance, port: 8080}
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {memory: 640Mi}
 ---
 apiVersion: v1
 kind: Service

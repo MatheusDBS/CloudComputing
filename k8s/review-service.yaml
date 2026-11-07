@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: review-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: review-service
+  template:
+    metadata:
+      labels:
+        app: review-service
+    spec:
+      containers:
+        - name: review-service
+          image: bookgather/review-service:1.0.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          env:
+            - name: PORT
+              value: "3000"
+            - name: DB_HOST
+              value: postgres-review
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: reviewdb
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef: {name: postgres-review-auth, key: username}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: postgres-review-auth, key: password}
+            # Service Discovery: nome do Service do book-service.
+            - name: BOOK_SERVICE_URL
+              value: http://book-service:8080
+            - name: RABBITMQ_HOST
+              value: rabbitmq
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef: {name: rabbitmq-auth, key: username}
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: rabbitmq-auth, key: password}
+          readinessProbe:
+            httpGet: {path: /reviews/health, port: 3000}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {memory: 256Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: review-service
+spec:
+  selector:
+    app: review-service
+  ports:
+    - port: 3000
+      targetPort: 3000

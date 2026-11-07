@@ -1,0 +1,21 @@
+# ClusterConfig do eksctl (nao e um manifesto Kubernetes).
+# Substitua os ARNs pelos do SEU Learner Lab:
+#   aws iam list-roles --query "Roles[?contains(RoleName, 'LabEks')].[RoleName,Arn]" --output table
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: bookgather
+  region: us-east-1
+
+iam:
+  serviceRoleARN: "<ARN_LabEksClusterRole>"
+
+managedNodeGroups:
+  - name: bookgather-nodes
+    instanceType: t3.medium
+    desiredCapacity: 2
+    minSize: 2
+    maxSize: 2
+    iam:
+      instanceRoleARN: "<ARN_LabEksNodeRole>"
