@@ -7,7 +7,8 @@ const url = () => {
   const pass = encodeURIComponent(process.env.RABBITMQ_PASSWORD || 'change-me-lab');
   const host = process.env.RABBITMQ_HOST || 'localhost';
   const port = process.env.RABBITMQ_PORT || 5672;
-  return `amqp://${user}:${pass}@${host}:${port}`;
+  // RabbitMQ 4.1 exige frame_max >= 8192; o padrao do amqplib (4096) e recusado.
+  return `amqp://${user}:${pass}@${host}:${port}?frameMax=131072`;
 };
 
 let channel = null;

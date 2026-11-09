@@ -9,7 +9,7 @@ metadata:
   region: us-east-1
 
 iam:
-  serviceRoleARN: "<ARN_LabEksClusterRole>"
+  serviceRoleARN: "arn:aws:iam::568385838582:role/c222296a5607975l18243012t1w568385-LabEksClusterRole-erQphQwiWu6l"
 
 managedNodeGroups:
   - name: bookgather-nodes
@@ -18,4 +18,4 @@ managedNodeGroups:
     minSize: 2
     maxSize: 2
     iam:
-      instanceRoleARN: "<ARN_LabEksNodeRole>"
+      instanceRoleARN: "arn:aws:iam::568385838582:role/c222296a5607975l18243012t1w568385838-LabEksNodeRole-WH5wV8pp9pLa"

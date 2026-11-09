@@ -14,11 +14,11 @@ resources:
 
 images:
   - name: bookgather/book-service
-    newName: SEU_USUARIO_DOCKERHUB/bookgather-book-service
+    newName: matheudbs/bookgather-book-service
     newTag: "1.0.0"
   - name: bookgather/review-service
-    newName: SEU_USUARIO_DOCKERHUB/bookgather-review-service
+    newName: matheudbs/bookgather-review-service
     newTag: "1.0.0"
   - name: bookgather/notification-service
-    newName: SEU_USUARIO_DOCKERHUB/bookgather-notification-service
+    newName: matheudbs/bookgather-notification-service
     newTag: "1.0.0"

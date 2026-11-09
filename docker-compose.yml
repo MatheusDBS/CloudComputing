@@ -7,8 +7,6 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: bookdb
-    ports:
-      - "3307:3306"
     volumes:
       - bookgather-mysql-data:/var/lib/mysql
 

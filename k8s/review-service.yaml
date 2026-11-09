@@ -38,6 +38,9 @@ spec:
               value: http://book-service:8080
             - name: RABBITMQ_HOST
               value: rabbitmq
+            # Sem isto o Kubernetes injeta RABBITMQ_PORT=tcp://<ip>:5672 (variavel do Service rabbitmq).
+            - name: RABBITMQ_PORT
+              value: "5672"
             - name: RABBITMQ_USER
               valueFrom:
                 secretKeyRef: {name: rabbitmq-auth, key: username}
