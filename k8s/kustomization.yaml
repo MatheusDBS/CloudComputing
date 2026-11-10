@@ -10,6 +10,8 @@ resources:
   - postgres.yaml
   - review-service.yaml
   - notification-service.yaml
+  - mongo.yaml
+  - shelf-service.yaml
   - ingress.yaml
 
 images:
@@ -21,4 +23,7 @@ images:
     newTag: "1.0.0"
   - name: bookgather/notification-service
     newName: matheudbs/bookgather-notification-service
+    newTag: "1.0.0"
+  - name: bookgather/shelf-service
+    newName: matheudbs/bookgather-shelf-service
     newTag: "1.0.0"

@@ -1,6 +1,6 @@
 # BookGather — Avaliação Somativa N2 (Cloud Native no Amazon EKS)
 
-Aplicação de catálogo e avaliação de livros composta por três microsserviços independentes,
+Aplicação de catálogo e avaliação de livros composta por quatro microsserviços independentes,
 implantada no **Amazon EKS**, com **Database per Service**, **REST**, **RabbitMQ**,
 **Service Discovery**, **escalabilidade horizontal** e **NGINX Ingress Controller**.
 
@@ -35,6 +35,10 @@ Baseada nos laboratórios **Back L06 — Kubernetes na AWS EKS** e **Back L07 �
                                         |                   |
                                         +--> RabbitMQ ------+
                                      fila review.created (async)
+
+   /shelves --> Service shelf-service --> Pod shelf (Python) --> Service mongo-shelf --> MongoDB
+                        |                                                               (shelfdb)
+                        +-- REST (sync) GET http://book-service:8080/books/{id}
 ```
 
 ### Fluxo integrado
@@ -47,6 +51,9 @@ Baseada nos laboratórios **Back L06 — Kubernetes na AWS EKS** e **Back L07 �
 5. O **notification-service** consome o evento **de forma assíncrona**, simula o envio (1,5 s)
    e disponibiliza a notificação em `GET /notifications`.
 
+Em paralelo, o **shelf-service** (estante de leitura) também consulta o book-service por REST
+antes de adicionar um livro à estante de um usuário, e grava no seu próprio **MongoDB**.
+
 ## Microsserviços e responsáveis
 
 | Microsserviço | Responsabilidade | Linguagem | Banco | Porta | Réplicas | Responsável |
@@ -54,6 +61,7 @@ Baseada nos laboratórios **Back L06 — Kubernetes na AWS EKS** e **Back L07 �
 | `book-service` | Catálogo de livros (CRUD) | Java 17 / Spring Boot | MySQL 8.4 | 8080 | **3** | _nome do integrante_ |
 | `review-service` | Avaliações de livros; valida o livro via REST e publica eventos | Node.js 20 / Express | PostgreSQL 16 | 3000 | 1 | _nome do integrante_ |
 | `notification-service` | Consome eventos e gera notificações | Python 3.12 / Flask + pika | — (memória) | 5000 | 1 | _nome do integrante_ |
+| `shelf-service` | Estante de leitura por usuário (quero ler / lendo / lido); valida o livro via REST | Python 3.12 / Flask + pymongo | MongoDB 7 | 5001 | 1 | _nome do integrante_ |
 
 > Preencha a coluna **Responsável**: cada integrante apresenta o seu microsserviço.
 
@@ -70,21 +78,23 @@ Baseada nos laboratórios **Back L06 — Kubernetes na AWS EKS** e **Back L07 �
 | GET | `/reviews/balanceamento?n=20` | review-service chama `/instance` do book-service N vezes e conta os Pods |
 | GET | `/reviews/instance` | review-service |
 | GET | `/notifications` | notification-service |
+| GET/POST | `/shelves` (`?usuario=ana` para filtrar) | shelf-service |
+| PUT/DELETE | `/shelves/{id}` (PUT altera o `status`) | shelf-service |
 
 ## Atendimento aos requisitos
 
 | # | Requisito | Onde |
 |---|---|---|
-| 1 | Desenvolvimento individual | 3 microsserviços com responsabilidades distintas (tabela acima) |
-| 2 | Diversidade tecnológica | Java, Node.js e Python; MySQL e PostgreSQL |
-| 3 | Conteinerização | `book-service/Dockerfile`, `review-service/Dockerfile`, `notification-service/Dockerfile` |
+| 1 | Desenvolvimento individual | 4 microsserviços com responsabilidades distintas (tabela acima) |
+| 2 | Diversidade tecnológica | Java, Node.js e Python; MySQL, PostgreSQL e MongoDB |
+| 3 | Conteinerização | Um `Dockerfile` em cada pasta de microsserviço |
 | 4 | Amazon EKS | `aws/eks-cluster-academy.yaml` + Deployments/Services em `k8s/` |
-| 5 | Database per Service | `k8s/mysql.yaml` (só book-service) e `k8s/postgres.yaml` (só review-service), Secrets separados |
-| 6 | Comunicação síncrona | `review-service/src/bookClient.js` → `GET /books/{id}` |
+| 5 | Database per Service | `k8s/mysql.yaml` (só book-service) e `k8s/postgres.yaml` (só review-service), `k8s/mongo.yaml` (só shelf-service), Secrets separados |
+| 6 | Comunicação síncrona | `review-service/src/bookClient.js` e `shelf-service/app.py` → `GET /books/{id}` |
 | 7 | Comunicação assíncrona | `review-service/src/publisher.js` → fila `review.created` → `notification-service/app.py` |
 | 8 | Service Discovery | `BOOK_SERVICE_URL=http://book-service:8080`, `DB_HOST=postgres-review`, `RABBITMQ_HOST=rabbitmq` |
 | 9 | Escalabilidade horizontal | `book-service` com `replicas: 3`; `/instance` e `/reviews/balanceamento` |
-| 10 | Ingress | `k8s/ingress.yaml` com regras por caminho para os 3 serviços |
+| 10 | Ingress | `k8s/ingress.yaml` com regras por caminho para os 4 serviços |
 
 ## Estrutura
 
@@ -94,6 +104,7 @@ Baseada nos laboratórios **Back L06 — Kubernetes na AWS EKS** e **Back L07 �
 ├── book-service/                  # Java / Spring Boot / MySQL
 ├── review-service/                # Node.js / Express / PostgreSQL / RabbitMQ (producer)
 ├── notification-service/          # Python / Flask / RabbitMQ (consumer)
+├── shelf-service/                 # Python / Flask / MongoDB
 ├── k8s/                           # Manifests Kubernetes (kubectl apply -k k8s)
 ├── docker-compose.yml             # Ambiente local de desenvolvimento
 └── demo.http                      # Requisições do roteiro de demonstração
@@ -110,6 +121,7 @@ docker compose up --build
 - book-service: http://localhost:8080/swagger-ui/index.html
 - review-service: http://localhost:3000/reviews
 - notification-service: http://localhost:5000/notifications
+- shelf-service: http://localhost:5001/shelves
 - RabbitMQ Management: http://localhost:15672 (`bookgather` / `change-me-lab`)
 
 ## Implantação no Amazon EKS
@@ -128,10 +140,12 @@ $U = "SEU_USUARIO_DOCKERHUB"
 docker build -t "$U/bookgather-book-service:1.0.0" ./book-service
 docker build -t "$U/bookgather-review-service:1.0.0" ./review-service
 docker build -t "$U/bookgather-notification-service:1.0.0" ./notification-service
+docker build -t "$U/bookgather-shelf-service:1.0.0" ./shelf-service
 
 docker push "$U/bookgather-book-service:1.0.0"
 docker push "$U/bookgather-review-service:1.0.0"
 docker push "$U/bookgather-notification-service:1.0.0"
+docker push "$U/bookgather-shelf-service:1.0.0"
 ```
 
 Depois, em `k8s/kustomization.yaml`, substitua `SEU_USUARIO_DOCKERHUB` pelo seu usuário.
@@ -194,6 +208,8 @@ kubectl rollout status deployment/postgres-review --timeout=300s
 kubectl rollout status deployment/book-service --timeout=300s
 kubectl rollout status deployment/review-service --timeout=300s
 kubectl rollout status deployment/notification-service --timeout=300s
+kubectl rollout status deployment/mongo-shelf --timeout=300s
+kubectl rollout status deployment/shelf-service --timeout=300s
 
 kubectl get pods -o wide
 kubectl get services
@@ -251,6 +267,17 @@ Invoke-RestMethod "http://$H/notifications"
 
 Com `bookId` inexistente (ex.: 999) a resposta é **400**: prova de que a validação REST no book-service ocorre.
 
+**5b. Estante de leitura (shelf-service, MongoDB)**:
+
+```powershell
+$item = Invoke-RestMethod -Method Post -Uri "http://$H/shelves" -ContentType "application/json" `
+  -Body '{"usuario":"ana","bookId":1,"status":"LENDO"}'
+Invoke-RestMethod -Method Put -Uri "http://$H/shelves/$($item.id)" -ContentType "application/json" -Body '{"status":"LIDO"}'
+Invoke-RestMethod "http://$H/shelves?usuario=ana"
+```
+
+Adicionar o mesmo livro de novo retorna **409**; um livro inexistente retorna **400** (validação REST no book-service).
+
 **6. Fila acumulando (assincronismo)**:
 
 ```powershell
@@ -268,6 +295,7 @@ kubectl run teste --image=curlimages/curl -it --rm -- sh
 curl http://book-service:8080/books
 curl http://review-service:3000/reviews
 curl http://notification-service:5000/notifications
+curl http://shelf-service:5001/shelves
 ```
 
 **8. Isolamento da persistência** — cada banco só contém os dados do seu serviço:
@@ -275,6 +303,7 @@ curl http://notification-service:5000/notifications
 ```powershell
 kubectl exec -it deployment/mysql-bookgather -- mysql -uroot -plabbook123 -e "SHOW TABLES FROM bookdb;"
 kubectl exec -it deployment/postgres-review -- psql -U review -d reviewdb -c "\dt"
+kubectl exec -it deployment/mongo-shelf -- mongosh -u shelf -p labshelf123 --quiet --eval "db.getSiblingDB('shelfdb').getCollectionNames()"
 ```
 
 **9. Autorrecuperação** (opcional):

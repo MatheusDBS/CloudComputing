@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shelf-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shelf-service
+  template:
+    metadata:
+      labels:
+        app: shelf-service
+    spec:
+      # Evita que o Kubernetes injete variaveis como MONGO_SHELF_PORT=tcp://... no Pod.
+      enableServiceLinks: false
+      containers:
+        - name: shelf-service
+          image: bookgather/shelf-service:1.0.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5001
+          env:
+            - name: PORT
+              value: "5001"
+            - name: MONGO_HOST
+              value: mongo-shelf
+            - name: MONGO_PORT
+              value: "27017"
+            - name: MONGO_DB
+              value: shelfdb
+            - name: MONGO_USER
+              valueFrom:
+                secretKeyRef: {name: mongo-shelf-auth, key: username}
+            - name: MONGO_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: mongo-shelf-auth, key: password}
+            # Service Discovery: nome do Service do book-service.
+            - name: BOOK_SERVICE_URL
+              value: http://book-service:8080
+          readinessProbe:
+            httpGet: {path: /shelves/health, port: 5001}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 50m, memory: 96Mi}
+            limits: {memory: 256Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shelf-service
+spec:
+  selector:
+    app: shelf-service
+  ports:
+    - port: 5001
+      targetPort: 5001

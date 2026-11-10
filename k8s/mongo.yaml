@@ -1,0 +1,60 @@
+# Banco exclusivo do shelf-service (Database per Service).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongo-shelf-auth
+type: Opaque
+stringData:
+  username: shelf
+  password: labshelf123
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-shelf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo-shelf
+  template:
+    metadata:
+      labels:
+        app: mongo-shelf
+    spec:
+      containers:
+        - name: mongo
+          image: mongo:7
+          ports:
+            - containerPort: 27017
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef: {name: mongo-shelf-auth, key: username}
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: mongo-shelf-auth, key: password}
+          readinessProbe:
+            tcpSocket: {port: 27017}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {memory: 512Mi}
+          volumeMounts:
+            - name: mongo-data
+              mountPath: /data/db
+      volumes:
+        - name: mongo-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-shelf
+spec:
+  selector:
+    app: mongo-shelf
+  ports:
+    - port: 27017
+      targetPort: 27017
