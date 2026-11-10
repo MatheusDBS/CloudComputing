@@ -1,5 +1,7 @@
 const express = require('express');
 const os = require('os');
+const swaggerUi = require('swagger-ui-express');
+const swaggerJSDoc = require('swagger-jsdoc');
 const db = require('./db');
 const books = require('./bookClient');
 const publisher = require('./publisher');
@@ -10,12 +12,68 @@ app.use(express.json());
 const PORT = Number(process.env.PORT || 3000);
 const POD = process.env.HOSTNAME || os.hostname();
 
+// CONFIGURAÇÃO DO SWAGGER / OPENAPI
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'Review Service API',
+      version: '1.0.0',
+      description: 'Documentação da API de Avaliações (Review Service) do projeto Cloud Computing',
+    },
+    servers: [
+      {
+        url: 'http://localhost:3000',
+        description: 'Ambiente local / Ingress',
+      },
+    ],
+  },
+  apis: [__filename], // Lê a documentação JSDoc diretamente deste arquivo
+};
+
+const swaggerDocs = swaggerJSDoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+// ROTAS DO MICROSSERVIÇO
 const router = express.Router();
 
+/**
+ * @swagger
+ * /reviews/health:
+ *   get:
+ *     summary: Verifica a saúde do microsserviço
+ *     responses:
+ *       200:
+ *         description: Microsserviço operacional
+ */
 router.get('/health', (req, res) => res.json({ status: 'UP' }));
 
+/**
+ * @swagger
+ * /reviews/instance:
+ *   get:
+ *     summary: Retorna o ID do Pod atual do review-service
+ *     responses:
+ *       200:
+ *         description: Nome do host/pod respondendo à requisição
+ */
 router.get('/instance', (req, res) => res.json({ pod: POD }));
 
+/**
+ * @swagger
+ * /reviews/balanceamento:
+ *   get:
+ *     summary: Testa o balanceamento de carga e Service Discovery chamando o book-service
+ *     parameters:
+ *       - in: query
+ *         name: n
+ *         schema:
+ *           type: integer
+ *         description: Número de chamadas a serem feitas (padrão 10, máx 100)
+ *     responses:
+ *       200:
+ *         description: Estatísticas de distribuição entre os pods do book-service
+ */
 // Chama /instance do book-service N vezes pelo nome do Service e conta qual Pod
 // respondeu cada chamada: evidencia o balanceamento entre as replicas.
 router.get('/balanceamento', async (req, res, next) => {
@@ -32,6 +90,21 @@ router.get('/balanceamento', async (req, res, next) => {
   }
 });
 
+/**
+ * @swagger
+ * /reviews:
+ *   get:
+ *     summary: Lista todas as avaliações cadastradas
+ *     parameters:
+ *       - in: query
+ *         name: bookId
+ *         schema:
+ *           type: integer
+ *         description: Filtrar avaliações por ID do livro específico
+ *     responses:
+ *       200:
+ *         description: Lista de avaliações retornada com sucesso
+ */
 router.get('/', async (req, res, next) => {
   try {
     res.json(await db.listar(req.query.bookId));
@@ -40,6 +113,24 @@ router.get('/', async (req, res, next) => {
   }
 });
 
+/**
+ * @swagger
+ * /reviews/{id}:
+ *   get:
+ *     summary: Busca uma avaliação específica pelo ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID da avaliação
+ *     responses:
+ *       200:
+ *         description: Dados da avaliação encontrada
+ *       404:
+ *         description: Avaliação não encontrada
+ */
 router.get('/:id', async (req, res, next) => {
   try {
     const review = await db.buscar(req.params.id);
@@ -50,6 +141,43 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
+/**
+ * @swagger
+ * /reviews:
+ *   post:
+ *     summary: Cria uma nova avaliação de livro
+ *     description: Valida o livro via REST no book-service, salva no PostgreSQL e publica evento no RabbitMQ.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - bookId
+ *               - autor
+ *               - nota
+ *             properties:
+ *               bookId:
+ *                 type: integer
+ *                 example: 1
+ *               autor:
+ *                 type: string
+ *                 example: "João Victor"
+ *               nota:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 5
+ *                 example: 5
+ *               comentario:
+ *                 type: string
+ *                 example: "Excelente arquitetura cloud native!"
+ *     responses:
+ *       201:
+ *         description: Avaliação criada com sucesso
+ *       400:
+ *         description: Dados inválidos ou livro inexistente
+ */
 router.post('/', async (req, res, next) => {
   try {
     const { bookId, autor, nota, comentario } = req.body || {};
@@ -83,11 +211,13 @@ router.post('/', async (req, res, next) => {
 
 app.use('/reviews', router);
 
+// Middleware global de tratamento de erros
 app.use((err, req, res, next) => {
   console.error('[ERRO]', err.message);
   res.status(502).json({ erro: err.message });
 });
 
+// Inicialização do Banco de Dados, RabbitMQ e Servidor HTTP
 db.init().then(() => {
   publisher.getChannel();
   app.listen(PORT, () => console.log(`[REVIEW] Ouvindo na porta ${PORT} (pod ${POD})`));
