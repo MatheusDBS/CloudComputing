@@ -51,9 +51,9 @@ Baseada nos laboratórios **Back L06 — Kubernetes na AWS EKS** e **Back L07 �
 
 | Microsserviço | Responsabilidade | Linguagem | Banco | Porta | Réplicas | Responsável |
 |---|---|---|---|---|---|---|
-| `book-service` | Catálogo de livros (CRUD) | Java 17 / Spring Boot | MySQL 8.4 | 8080 | **3** | _nome do integrante_ |
-| `review-service` | Avaliações de livros; valida o livro via REST e publica eventos | Node.js 20 / Express | PostgreSQL 16 | 3000 | 1 | _nome do integrante_ |
-| `notification-service` | Consome eventos e gera notificações | Python 3.12 / Flask + pika | — (memória) | 5000 | 1 | _nome do integrante_ |
+| `book-service` | Catálogo de livros (CRUD) | Java 17 / Spring Boot | MySQL 8.4 | 8080 | **3** | Matheus De Bortoli Silva  |
+| `review-service` | Avaliações de livros; valida o livro via REST e publica eventos | Node.js 20 / Express | PostgreSQL 16 | 3000 | 1 | João Victor Saboya Ribeiro de Carvalho |
+| `notification-service` | Consome eventos e gera notificações | Python 3.12 / Flask + pika | — (memória) | 5000 | 1 | Arthur de Oliveira Carvalho |
 
 > Preencha a coluna **Responsável**: cada integrante apresenta o seu microsserviço.
 
