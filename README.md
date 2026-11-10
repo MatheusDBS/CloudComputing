@@ -58,10 +58,10 @@ antes de adicionar um livro à estante de um usuário, e grava no seu próprio *
 
 | Microsserviço | Responsabilidade | Linguagem | Banco | Porta | Réplicas | Responsável |
 |---|---|---|---|---|---|---|
-| `book-service` | Catálogo de livros (CRUD) | Java 17 / Spring Boot | MySQL 8.4 | 8080 | **3** | _nome do integrante_ |
-| `review-service` | Avaliações de livros; valida o livro via REST e publica eventos | Node.js 20 / Express | PostgreSQL 16 | 3000 | 1 | _nome do integrante_ |
-| `notification-service` | Consome eventos e gera notificações | Python 3.12 / Flask + pika | — (memória) | 5000 | 1 | _nome do integrante_ |
-| `shelf-service` | Estante de leitura por usuário (quero ler / lendo / lido); valida o livro via REST | Python 3.12 / Flask + pymongo | MongoDB 7 | 5001 | 1 | _nome do integrante_ |
+| `book-service` | Catálogo de livros (CRUD) | Java 17 / Spring Boot | MySQL 8.4 | 8080 | **3** | Matheus De Bortoli Silva |
+| `review-service` | Avaliações de livros; valida o livro via REST e publica eventos | Node.js 20 / Express | PostgreSQL 16 | 3000 | 1 | João Victor Saboya Ribeiro de Carvalho |
+| `notification-service` | Consome eventos e gera notificações | Python 3.12 / Flask + pika | — (memória) | 5000 | 1 | Arthur de Oliveira Carvalho |
+| `shelf-service` | Estante de leitura por usuário (quero ler / lendo / lido); valida o livro via REST | Python 3.12 / Flask + pymongo | MongoDB 7 | 5001 | 1 | Caio Lamoglia |
 
 > Preencha a coluna **Responsável**: cada integrante apresenta o seu microsserviço.
 
@@ -77,6 +77,7 @@ antes de adicionar um livro à estante de um usuário, e grava no seu próprio *
 | GET | `/reviews/{id}` | review-service |
 | GET | `/reviews/balanceamento?n=20` | review-service chama `/instance` do book-service N vezes e conta os Pods |
 | GET | `/reviews/instance` | review-service |
+| GET | `/reviews/api-docs` | review-service (Swagger) |
 | GET | `/notifications` | notification-service |
 | GET/POST | `/shelves` (`?usuario=ana` para filtrar) | shelf-service |
 | PUT/DELETE | `/shelves/{id}` (PUT altera o `status`) | shelf-service |
